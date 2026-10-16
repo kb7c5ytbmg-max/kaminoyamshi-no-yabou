@@ -1,0 +1,638 @@
+　<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>上山市の野望</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101927;color:#f2f0e8;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+header{text-align:center;padding:25px 10px;background:#19283a;border-bottom:2px solid #b99657}
+h1{font-family:serif;color:#e9c47c;margin:5px;font-size:30px}
+header p{font-size:12px;color:#b9c5d2}
+main{max-width:900px;margin:auto;padding:12px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.stat{background:#223348;border:1px solid #52657b;border-radius:8px;text-align:center;padding:10px 2px;font-size:10px}
+.stat b{display:block;font-size:21px;color:#e9c47c}
+.panel{background:#1c2b3d;border:1px solid #40566c;border-radius:12px;padding:15px;margin-top:13px}
+h2{font-size:18px;color:#e9c47c;margin:5px 0 15px}
+.desc{font-size:12px;color:#b6c4d2;line-height:1.8}
+.map{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin-top:15px}
+.city{min-height:55px;border:1px solid #52657b;border-radius:6px;background:#34475b;color:white;font-size:11px;padding:4px 1px}
+.city small{display:block;font-size:9px;opacity:.8;margin-top:4px}
+.city.owned{background:#386b59;border-color:#85c5a1}
+.city.home{background:#bd944c;color:#171717;font-weight:bold}
+.city.available{border:2px solid #f5d38a}
+.city.selected{outline:2px solid white}
+.city.locked{opacity:.5}
+button{cursor:pointer;touch-action:manipulation}
+.card{background:#122033;border-radius:8px;padding:14px;margin:10px 0;line-height:1.8;font-size:13px}
+.card strong{color:#e9c47c}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.action{background:#304a61;border:1px solid #73899b;border-radius:8px;color:white;padding:13px 5px;font-size:13px;min-height:52px}
+.action.primary{background:#80613d;border-color:#d5ae67}
+.action:disabled{opacity:.35}
+.log{font-size:12px;line-height:1.8;max-height:220px;overflow:auto}
+.log div{border-bottom:1px solid #435569;padding:7px 0}
+.overlay{position:fixed;inset:0;background:#000d;display:flex;align-items:center;justify-content:center;padding:16px;z-index:100}
+.modal{background:#203247;border:1px solid #e9c47c;border-radius:12px;padding:22px;width:100%;max-width:450px;max-height:85vh;overflow:auto}
+.modal h2{font-family:serif;font-size:23px}
+.modal p{white-space:pre-line;line-height:1.9;font-size:14px}
+.choice{display:block;width:100%;background:#344d63;color:white;border:1px solid #728ba0;border-radius:8px;padding:13px;margin-top:9px;text-align:left}
+.hidden{display:none!important}
+footer{text-align:center;padding:25px;font-size:11px;color:#aab7c4}
+</style>
+</head>
+<body>
+
+<header>
+<h1>⚔️ 上山市の野望 ⚔️</h1>
+<p>〜かみのやま天下統一〜</p>
+<p>山形県35市町村をすべて上山市にせよ。</p>
+</header>
+
+<main>
+
+<div class="stats">
+<div class="stat"><b id="year">1</b>行政年度</div>
+<div class="stat"><b id="count">1/35</b>支配自治体</div>
+<div class="stat"><b id="money">100</b>予算</div>
+<div class="stat"><b id="army">80</b>動員力</div>
+</div>
+
+<section class="panel">
+<h2>🗾 山形県勢力図</h2>
+<p class="desc">
+金色の枠は攻略可能な自治体です。<br>
+市町村を選択して政策を実行してください。<br>
+※位置関係を簡略化した戦略マップです。
+</p>
+<div id="map" class="map"></div>
+</section>
+
+<section class="panel">
+<h2>🏯 上山市長執務室</h2>
+
+<div class="card">
+<strong>秘書官からの報告</strong>
+<p id="report">
+市長、山形県統一計画の準備が整いました。
+なお、他の自治体にはまだ伝えておりません。
+</p>
+</div>
+
+<div class="card">
+<strong id="targetName">攻略対象を選択</strong>
+<p id="targetInfo">勢力図から自治体を選んでください。</p>
+</div>
+
+<div class="actions">
+<button class="action primary" id="attack">⚔️ 編入作戦</button>
+<button class="action" id="talk">🤝 合併交渉</button>
+<button class="action" id="gift">🍒 名産品外交</button>
+<button class="action" id="spy">🔎 情報収集</button>
+</div>
+
+<h2>📜 内政</h2>
+
+<div class="actions">
+<button class="action" id="train">🏋️ 動員強化<br>予算20</button>
+<button class="action" id="tax">💰 財源確保<br>予算+30</button>
+<button class="action" id="rest">♨️ 温泉外交<br>予算15</button>
+<button class="action primary" id="next">📅 次の年度</button>
+</div>
+
+<p id="status" class="desc"></p>
+
+<h2>📰 行政公報</h2>
+<div id="log" class="log"></div>
+
+</section>
+
+</main>
+
+<footer>
+上山市の野望 © 上山市天下統一計画<br>
+※架空の戦略ゲームです。
+</footer>
+
+<div id="overlay" class="overlay hidden">
+<div class="modal">
+<h2 id="modalTitle"></h2>
+<p id="modalText"></p>
+<div id="modalButtons"></div>
+</div>
+</div>
+
+<script>
+"use strict";
+
+const cities=[
+["遊佐町","鳥海山",60],
+["酒田市","港町",105],
+["庄内町","庄内米",48],
+["三川町","田園",43],
+["鶴岡市","だだちゃ豆",105],
+["真室川町","豪雪",45],
+["金山町","金山杉",43],
+["鮭川村","鮭",38],
+["新庄市","新庄まつり",70],
+["戸沢村","最上川",44],
+["大蔵村","肘折温泉",40],
+["舟形町","鮎",39],
+["最上町","温泉",50],
+["大石田町","そば",45],
+["尾花沢市","スイカ",62],
+["村山市","バラ",57],
+["東根市","さくらんぼ",67],
+["天童市","将棋",80],
+["寒河江市","さくらんぼ",72],
+["河北町","紅花",52],
+["西川町","月山",49],
+["大江町","果樹",42],
+["朝日町","りんご",43],
+["中山町","芋煮",45],
+["山辺町","ニット",47],
+["山形市","県庁所在地",135],
+["上山市","かみのやま温泉",0],
+["南陽市","ワイン",64],
+["高畠町","ぶどう",60],
+["川西町","ダリア",53],
+["米沢市","米沢牛",115],
+["長井市","あやめ",65],
+["白鷹町","紅花",53],
+["飯豊町","どぶろく",49],
+["小国町","山菜",57]
+];
+
+const HOME=26;
+const KEY="kaminoyama-game-v2";
+
+const $=id=>document.getElementById(id);
+const random=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const limit=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+function initial(){
+return{
+year:1,
+money:100,
+army:80,
+trust:65,
+actions:2,
+owned:[HOME],
+scouted:[],
+log:["上山市役所は山形県統一計画を発表。県庁は困惑している。"]
+};
+}
+
+let game;
+
+try{
+game=JSON.parse(localStorage.getItem(KEY))||initial();
+if(!Array.isArray(game.owned))game=initial();
+}catch(e){
+game=initial();
+}
+
+let selected=-1;
+
+function save(){
+try{
+localStorage.setItem(KEY,JSON.stringify(game));
+}catch(e){}
+}
+
+function notice(message){
+game.log.unshift("【"+game.year+"年】"+message);
+game.log=game.log.slice(0,35);
+}
+
+function dialog(title,message,options){
+$("modalTitle").textContent=title;
+$("modalText").textContent=message;
+
+const area=$("modalButtons");
+area.innerHTML="";
+
+options.forEach(option=>{
+const b=document.createElement("button");
+b.className="choice";
+b.textContent=option[0];
+b.onclick=()=>{
+$("overlay").classList.add("hidden");
+option[1]();
+};
+area.appendChild(b);
+});
+
+$("overlay").classList.remove("hidden");
+}
+
+function report(text){
+$("report").textContent=text;
+}
+
+function isOwned(i){
+return game.owned.includes(i);
+}
+
+function canAttack(i){
+if(i===HOME||isOwned(i))return false;
+
+/*
+段階的に攻略範囲が広がる方式。
+初期は上山周辺から攻略する。
+*/
+const start=[25,27,28,24,17];
+
+if(game.owned.length===1){
+return start.includes(i);
+}
+
+const distance=Math.abs(i-HOME);
+
+return start.includes(i)||
+distance<=game.owned.length*2+3||
+game.owned.length>=12;
+}
+
+function draw(){
+$("year").textContent=game.year;
+$("count").textContent=game.owned.length+"/35";
+$("money").textContent=game.money;
+$("army").textContent=game.army;
+
+$("status").textContent=
+"残り行動："+game.actions+"/2　｜　周辺自治体の信頼："+game.trust+"/100";
+
+const map=$("map");
+map.innerHTML="";
+
+cities.forEach((city,i)=>{
+const b=document.createElement("button");
+b.className="city";
+
+if(i===HOME)b.classList.add("home");
+else if(isOwned(i))b.classList.add("owned");
+else if(canAttack(i))b.classList.add("available");
+else b.classList.add("locked");
+
+if(selected===i)b.classList.add("selected");
+
+b.innerHTML=
+city[0]+"<small>"+
+(isOwned(i)?"上山市領":
+game.scouted.includes(i)?"守備"+city[2]:
+"未編入")+"</small>";
+
+b.onclick=()=>{
+selected=i;
+draw();
+};
+
+map.appendChild(b);
+});
+
+if(selected<0){
+$("targetName").textContent="攻略対象を選択";
+$("targetInfo").textContent="勢力図から自治体を選んでください。";
+}else{
+const city=cities[selected];
+
+$("targetName").textContent=city[0];
+
+$("targetInfo").textContent=
+"名産・特色："+city[1]+
+" ／ "+(game.scouted.includes(selected)?
+"守備力："+city[2]:"守備力：不明")+
+" ／ "+(isOwned(selected)?"編入済":
+canAttack(selected)?"攻略可能":"現在は攻略不可");
+}
+
+const active=
+selected>=0&&canAttack(selected)&&game.actions>0;
+
+["attack","talk","gift","spy"].forEach(id=>{
+$(id).disabled=!active;
+});
+
+$("train").disabled=game.actions<=0||game.money<20;
+$("tax").disabled=game.actions<=0;
+$("rest").disabled=game.actions<=0||game.money<15;
+
+const log=$("log");
+log.innerHTML="";
+
+game.log.forEach(line=>{
+const d=document.createElement("div");
+d.textContent=line;
+log.appendChild(d);
+});
+
+save();
+}
+
+function annex(i,method){
+game.owned.push(i);
+game.money+=random(8,18);
+game.army+=random(3,9);
+
+notice(cities[i][0]+"を"+method+"で編入。市役所の看板を上山市出張所に変更した。");
+
+report(
+"市長、"+cities[i][0]+"の編入が完了しました。"+
+cities[i][1]+"も本日から上山市の名産品です。"
+);
+
+if(i===25){
+notice("山形市を編入。県庁所在地の扱いについて県庁が緊急会議を開催。");
+}
+}
+
+function complete(){
+game.actions--;
+game.trust=limit(game.trust,0,100);
+game.money=limit(game.money,0,999);
+game.army=limit(game.army,1,999);
+draw();
+
+if(game.owned.length===35){
+victory();
+}
+}
+
+function battle(type){
+const i=selected;
+
+const cost=type==="突撃"?22:type==="奇襲"?14:8;
+const bonus=type==="突撃"?25:type==="奇襲"?random(-15,35):5;
+
+if(game.army<cost){
+dialog("動員不足",
+"秘書官「市役所の人員が足りません」",
+[["戻る",draw]]);
+return;
+}
+
+const chance=limit(
+55+(game.army-cities[i][2])*.45+
+bonus+(game.scouted.includes(i)?12:0),
+10,95
+);
+
+game.army-=cost;
+
+const success=Math.random()*100<chance;
+
+if(success){
+annex(i,"行政制圧");
+game.trust-=type==="突撃"?10:6;
+}else{
+game.army=Math.max(1,game.army-random(4,12));
+game.trust-=4;
+notice(cities[i][0]+"への編入作戦が失敗。秘書官は書類の不備と説明。");
+}
+
+complete();
+
+dialog(
+success?"⚔️ 編入成功":"⚔️ 作戦失敗",
+success?
+cities[i][0]+"が上山市の傘下に入りました。\n\n秘書官「市長、行政効率化の歴史的勝利です」":
+"作戦は失敗しました。\n\n秘書官「市長、先方から『そもそも何の話ですか』と問い合わせが来ています」",
+[["執務室へ戻る",draw]]
+);
+}
+
+$("attack").onclick=()=>{
+dialog(
+"編入作戦",
+"市長、どのような方法で編入しますか？",
+[
+["⚔️ 正面突破（動員22・成功率高）",()=>battle("突撃")],
+["🌙 夜間奇襲（動員14・運任せ）",()=>battle("奇襲")],
+["🏯 慎重な包囲（動員8）",()=>battle("包囲")],
+["中止",draw]
+]
+);
+};
+
+$("talk").onclick=()=>{
+const i=selected;
+
+const chance=limit(
+25+game.trust*.55-cities[i][2]*.12,
+12,85
+);
+
+const success=Math.random()*100<chance;
+
+if(success){
+annex(i,"友好合併");
+game.trust+=6;
+}else{
+game.trust+=2;
+notice(cities[i][0]+"との合併交渉が難航。先方は「初耳です」と回答。");
+}
+
+complete();
+
+dialog(
+success?"🤝 合併成立":"🤝 交渉決裂",
+success?
+"平和的な合併が成立しました。\n\n秘書官「先方には上山市の将来性をご理解いただきました」":
+"合併は拒否されました。\n\n秘書官「先方から『上山市になるメリットは何ですか』と質問されました。回答は検討中です」",
+[["了解",draw]]
+);
+};
+
+$("gift").onclick=()=>{
+const i=selected;
+
+if(game.money<18){
+dialog("予算不足","外交には予算18が必要です。",[["戻る",draw]]);
+return;
+}
+
+game.money-=18;
+
+const chance=limit(
+30+game.trust*.55-cities[i][2]*.1,
+15,85
+);
+
+const success=Math.random()*100<chance;
+
+if(success){
+annex(i,"名産品外交");
+game.trust+=8;
+}else{
+game.trust+=4;
+notice(cities[i][0]+"にラ・フランスを贈呈。合併は拒否されたが果物は好評。");
+}
+
+complete();
+
+dialog(
+success?"🍒 外交成功":"🍐 外交継続",
+success?
+"ラ・フランスの贈呈により合併が成立しました。\n\n秘書官「山形県の未来は果物に託されました」":
+"合併は成立しませんでした。\n\n秘書官「ラ・フランスはおいしかったとのことです」",
+[["次へ",draw]]
+);
+};
+
+$("spy").onclick=()=>{
+const i=selected;
+
+if(game.money<8){
+dialog("予算不足","情報収集には予算8が必要です。",[["戻る",draw]]);
+return;
+}
+
+game.money-=8;
+
+if(!game.scouted.includes(i)){
+game.scouted.push(i);
+}
+
+notice(cities[i][0]+"の守備力を調査した。");
+
+complete();
+
+dialog(
+"🔎 調査結果",
+cities[i][0]+"の守備力は"+cities[i][2]+
+"です。\n現在の上山市の動員力は"+game.army+
+"です。\n\n秘書官「今回の報告書は正確です」",
+[["確認",draw]]
+);
+};
+
+$("train").onclick=()=>{
+game.money-=20;
+game.army+=20;
+
+notice("上山市職員の動員訓練を実施。全員が市章を掲げて行進。");
+
+report("市長、動員力が20増加しました。なお通常業務は滞っています。");
+
+complete();
+};
+
+$("tax").onclick=()=>{
+game.money+=30;
+game.trust-=5;
+
+notice("地方創生特別予算30を確保。財源の詳細は非公開。");
+
+report("市長、予算を30確保しました。周辺自治体の信頼は少し下がりました。");
+
+complete();
+};
+
+$("rest").onclick=()=>{
+game.money-=15;
+game.trust+=12;
+game.army+=5;
+
+notice("かみのやま温泉で首長会議を開催。会議の大半は露天風呂で実施。");
+
+report("市長、温泉外交は好評です。信頼が12上昇しました。");
+
+complete();
+};
+
+$("next").onclick=()=>{
+game.year++;
+game.actions=2;
+
+game.money+=12+game.owned.length*2;
+game.army+=8+game.owned.length;
+
+let message="新年度が始まりました。各出張所から予算と職員が到着しています。";
+
+if(game.year%4===0){
+const loss=random(8,20);
+game.money=Math.max(0,game.money-loss);
+
+message="県の監査委員から統一計画の法的根拠を求められました。対応費"+loss+"を支出しました。";
+notice(message);
+}else if(game.year%5===0){
+game.trust=Math.max(0,game.trust-8);
+
+message="周辺自治体が「上山市の拡大を憂慮する会」を結成しました。";
+notice(message);
+}else if(game.year%3===0){
+game.money+=15;
+
+message="ラ・フランス輸出が好調。特別収入15を確保しました。";
+notice(message);
+}
+
+report(message);
+
+if(game.year>38&&game.owned.length<35){
+draw();
+
+dialog(
+"行政計画の失効",
+"38年間の統一計画が終了しました。\n\n編入数："+game.owned.length+"/35\n\n秘書官「市長、県庁から計画の見直しを求められています」",
+[
+["もう一度挑戦",()=>{
+game=initial();
+selected=-1;
+draw();
+}]
+]
+);
+
+return;
+}
+
+draw();
+};
+
+function victory(){
+let ending;
+
+if(game.trust>=75){
+ending="友好合併による上山連邦";
+}else if(game.trust<35){
+ending="強硬編入による上山帝国";
+}else{
+ending="行政合理化による大上山市";
+}
+
+dialog(
+"🏆 山形県統一！",
+"市長、ついに山形県35市町村すべてが上山市になりました！\n\n"+
+"統一年数："+game.year+"年\n"+
+"最終的な国号："+ending+"\n\n"+
+"秘書官「市長、県の面積は変わっておりませんが、すべての住所が上山市になりました」",
+[
+["統一後の世界を見る",draw],
+["もう一度天下統一",()=>{
+game=initial();
+selected=-1;
+draw();
+}]
+]
+);
+}
+
+draw();
+
+if(game.year===1&&game.owned.length===1){
+dialog(
+"🏯 市長、緊急報告です",
+"上山市の秘書官です。\n\n本日の議題は「山形県35市町村をすべて上山市にする件」です。\n\n期限は38行政年度。\n\nまずは近隣自治体への編入協議をご決裁ください。\n\nなお、山形県庁にはまだ相談しておりません。",
+[
+["⚔️ 上山市の天下統一を始める",draw]
+]
+);
+}
+</script>
+
+</body>
+</html>
