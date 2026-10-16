@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>上山市の野望｜山形統一編</title>
+<style>
+:root {
+  --bg:#101a27;--panel:#1a2939;--gold:#e9bf70;
+  --text:#f1f2e9;--sub:#a7b8c6;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif}
+header{text-align:center;padding:20px 10px}
+h1{color:var(--gold);font-family:serif;margin:5px}
+header p{color:var(--sub);font-size:13px}
+main{max-width:850px;margin:auto;padding:12px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.stat,.panel{background:var(--panel);border:1px solid #405569;border-radius:10px;padding:10px}
+.stat{text-align:center;font-size:11px}
+.stat b{display:block;color:var(--gold);font-size:21px}
+.panel{margin-top:12px}
+h2{font-size:17px;color:var(--gold)}
+.map{display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(8,48px);gap:3px}
+.city{background:#35475a;color:white;border:1px solid #64768b;border-radius:5px;font-size:10px;padding:2px;overflow:hidden}
+.city small{display:block;font-size:8px;opacity:.8}
+.city.owned{background:#426b5e}
+.city.home{background:#b08b47;color:#111}
+.city.available{border:2px solid #eac079}
+.city.selected{outline:2px solid white}
+.city.locked{opacity:.5}
+button{cursor:pointer}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.action{background:#30485d;color:white;border:1px solid #70879b;border-radius:8px;padding:13px 5px}
+.action:disabled{opacity:.3}
+.primary{background:#87653c}
+.card{background:#102031;padding:12px;border-radius:8px;margin:10px 0;line-height:1.7}
+.sub{font-size:12px;color:var(--sub)}
+.log{font-size:12px;max-height:180px;overflow:auto;line-height:1.8}
+.log div{border-bottom:1px solid #405569;padding:5px}
+.overlay{position:fixed;inset:0;background:#000c;display:flex;align-items:center;justify-content:center;padding:15px;z-index:10}
+.modal{background:#1b2b3b;border:1px solid var(--gold);border-radius:12px;padding:20px;width:min(430px,100%)}
+.modal h2{font-size:23px}
+.modal p{white-space:pre-line;line-height:1.8}
+.choice{display:block;width:100%;padding:13px;margin-top:8px;background:#30485d;color:white;border:1px solid #71879b;border-radius:7px;text-align:left}
+.choice small{display:block;color:#c4cbd3;margin-top:4px}
+.hide{display:none}
+footer{text-align:center;color:var(--sub);font-size:11px;padding:20px}
+</style>
+</head>
+<body>
+
+<header>
+<h1>上山市の野望</h1>
+<p>山形統一編 ─ 県内すべてを上山市に。</p>
+</header>
+
+<main>
+<div class="stats">
+<div class="stat"><b id="turn">1</b>行政年度</div>
+<div class="stat"><b id="count">1/35</b>上山市領</div>
+<div class="stat"><b id="money">100</b>予算</div>
+<div class="stat"><b id="army">80</b>動員力</div>
+</div>
+
+<section class="panel">
+<h2>山形県・勢力図</h2>
+<p class="sub">金色の枠が攻略可能な自治体です。市町村をタップしてください。<br>※位置関係を簡略化した戦略マップです。</p>
+<div id="map" class="map"></div>
+</section>
+
+<section class="panel">
+<h2>市長執務室</h2>
+<div id="brief" class="card">
+<strong>秘書官からの報告</strong>
+<p>市長、山形県統一に向けた行政手続きの準備が整いました。なお、他の自治体にはまだ伝えておりません。</p>
+</div>
+
+<div class="card">
+<strong id="targetTitle">政策対象を選択</strong>
+<p id="targetInfo" class="sub">地図から自治体を選んでください。</p>
+<div class="actions">
+<button id="attack" class="action primary">⚔️ 編入作戦</button>
+<button id="talk" class="action">🤝 合併交渉</button>
+<button id="gift" class="action">🎁 名産品外交</button>
+<button id="spy" class="action">🔎 情報収集</button>
+</div>
+</div>
+
+<div class="actions">
+<button id="train" class="action">🏯 動員強化<br><small>予算20 / 動員+18</small></button>
+<button id="tax" class="action">💰 地方創生<br><small>予算+30 / 信頼-5</small></button>
+<button id="rest" class="action">♨️ 温泉保養<br><small>予算15 / 信頼+12</small></button>
+<button id="next" class="action primary">📅 次の年度へ</button>
+</div>
+
+<p id="ap" class="sub"></p>
+<p id="trust" class="sub"></p>
+
+<h2>行政公報</h2>
+<div id="log" class="log"></div>
+</section>
+</main>
+
+<footer>山形県35市町村をすべて上山市に編入すれば統一達成。進行状況は自動保存されます。</footer>
+
+<div id="overlay" class="overlay hide">
+<div class="modal">
+<h2 id="modalTitle"></h2>
+<p id="modalBody"></p>
+<div id="modalChoices"></div>
+</div>
+</div>
+
+<script>
+const names=[
+'遊佐町','酒田市','庄内町','三川町','鶴岡市',
+'真室川町','金山町','鮭川村','新庄市','戸沢村',
+'大蔵村','舟形町','最上町','大石田町','尾花沢市',
+'村山市','東根市','天童市','寒河江市','河北町',
+'西川町','大江町','朝日町','中山町','山辺町',
+'山形市','上山市','南陽市','高畠町','川西町',
+'米沢市','長井市','白鷹町','飯豊町','小国町'
+];
+
+const coords=[
+[0,0],[0,1],[1,1],[1,2],[0,3],
+[3,0],[4,0],[3,1],[4,1],[2,1],
+[2,2],[4,2],[5,2],[3,3],[4,3],
+[3,4],[4,4],[4,5],[2,5],[3,5],
+[1,4],[1,5],[0,5],[3,6],[2,6],
+[4,6],[4,7],[5,6],[6,6],[5,7],
+[6,7],[5,5],[2,7],[1,7],[0,7]
+];
+
+const traits=[
+'鳥海山','港湾','米どころ','田園','庄内文化',
+'豪雪','山里','鮭','交通拠点','最上川',
+'山岳','舟運','温泉','そば','スイカ',
+'バラ','果樹','将棋','さくらんぼ','紅花',
+'月山','果樹','りんご','果樹','果樹',
+'県都','かみのやま温泉','ワイン','ぶどう','米',
+'米沢牛','あやめ','紅花','田園','山岳'
+];
+
+const power=names.map((n,i)=>
+ i===25?125:i===30?108:i===1||i===4?100:
+ i===26?0:36+(i*17)%43
+);
+
+const home=26;
+const key="kaminoyama-no-yabou-v1";
+const $=id=>document.getElementById(id);
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+function fresh(){
+ return {
+  owned:[home],turn:1,money:100,army:80,
+  trust:65,ap:2,scouted:[],flags:{},
+  log:['上山市役所は県内35自治体の編入計画を閣議決定した。なお閣議の参加者は秘書官1名。']
+ };
+}
+
+let s;
+try{
+ s=JSON.parse(localStorage.getItem(key))||fresh();
+ if(!s.owned||!s.flags)throw Error();
+}catch(e){s=fresh()}
+let selected=null;
+
+function save(){
+ localStorage.setItem(key,JSON.stringify(s));
+}
+
+function neighbors(i,j){
+ let [x,y]=coords[i],[u,v]=coords[j];
+ return Math.abs(x-u)+Math.abs(y-v)<=2 &&
+ Math.abs(x-u)<=1 && Math.abs(y-v)<=1;
+}
+
+function accessible(i){
+ return !s.owned.includes(i)&&
+ s.owned.some(j=>neighbors(i,j));
+}
+
+function note(t){
+ s.log.unshift('【'+s.turn+'年】'+t);
+ s.log=s.log.slice(0,35);
+}
+
+function modal(title,body,choices){
+ $('modalTitle').textContent=title;
+ $('modalBody').textContent=body;
+ $('modalChoices').innerHTML='';
+ choices.forEach(c=>{
+  let b=document.createElement('button');
+  b.className='choice';
+  b.innerHTML=c.label+(c.sub?'<small>'+c.sub+'</small>':'');
+  b.onclick=()=>{
+   $('overlay').classList.add('hide');
+   c.fn();
+  };
+  $('modalChoices').appendChild(b);
+ });
+ $('overlay').classList.remove('hide');
+}
+
+function render(){
+ $('turn').textContent=s.turn;
+ $('count').textContent=s.owned.length+'/35';
+ $('money').textContent=s.money;
+ $('army').textContent=s.army;
+ $('ap').textContent='本年度の残り行動：'+s.ap+'/2';
+ $('trust').textContent='周辺自治体からの信頼：'+s.trust+'/100';
+
+ let map=$('map');
+ map.innerHTML='';
+
+ names.forEach((n,i)=>{
+  let b=document.createElement('button');
+  b.className='city';
+  if(i===home)b.classList.add('home');
+  else if(s.owned.includes(i))b.classList.add('owned');
+  if(accessible(i))b.classList.add('available');
+  if(selected===i)b.classList.add('selected');
+  if(!s.owned.includes(i)&&!accessible(i))
+   b.classList.add('locked');
+
+  b.style.gridColumn=coords[i][0]+1;
+  b.style.gridRow=coords[i][1]+1;
+  b.innerHTML=n+'<small>'+
+   (s.owned.includes(i)?'上山市':
+    s.scouted.includes(i)?'守備'+power[i]:'自治体')+
+   '</small>';
+  b.onclick=()=>{selected=i;render()};
+  map.appendChild(b);
+ });
+
+ let valid=selected!==null&&accessible(selected);
+
+ $('targetTitle').textContent=selected===null?
+  '政策対象を選択':names[selected]+
+  (s.owned.includes(selected)?'（編入済）':'');
+
+ $('targetInfo').textContent=selected===null?
+  '地図から自治体を選んでください。':
+  traits[selected]+'のまち。'+
+  (s.scouted.includes(selected)?
+   '守備力'+power[selected]+'。':'守備力は未調査。')+
+  (valid?' 行政折衝が可能です。':' 現在は攻略できません。');
+
+ ['attack','talk','gift','spy'].forEach(id=>{
+  $(id).disabled=!valid||s.ap<1;
+ });
+ $('train').disabled=s.ap<1||s.money<20;
+ $('tax').disabled=s.ap<1;
+ $('rest').disabled=s.ap<1||s.money<15;
+ $('log').innerHTML=s.log.map(t=>'<div>'+t+'</div>').join('');
+ save();
+}
+
+function finish(){
+ s.ap--;
+ s.money=clamp(s.money,0,999);
+ s.army=clamp(s.army,1,999);
+ s.trust=clamp(s.trust,0,100);
+ render();
+ if(s.owned.length===35)win();
+}
+
+function annex(i,method){
+ if(s.owned.includes(i))return;
+ s.owned.push(i);
+ s.money+=rand(7,16);
+ s.army+=rand(2,8);
+ note(names[i]+'を'+method+'により編入。庁舎の表札は「上山市出張所」に交換された。');
+ $('brief').innerHTML=
+  '<strong>秘書官からの報告</strong><p>'+
+  names[i]+'の編入が完了しました。'+
+  traits[i]+'も正式に上山市の特産となります。</p>';
+ if(i===25){
+  note('山形市を編入。県庁所在地の変更について県庁は困惑している。');
+ }
+}
+
+function assault(style){
+ let i=selected;
+ if(s.ap<1)return;
+ let cost=style==='突撃'?22:style==='奇襲'?14:8;
+ if(s.army<cost){
+  modal('動員不足','秘書官「市役所の人員が足りません」',
+   [{label:'了解',fn:render}]);
+  return;
+ }
+ let boost=style==='突撃'?20:
+  style==='奇襲'?rand(-10,32):4;
+ let chance=clamp(
+  58+(s.army-power[i])*.43+boost+
+  (s.scouted.includes(i)?12:0)+
+  (s.trust-50)*.1,12,94
+ );
+ s.army-=cost;
+ let ok=Math.random()*100<chance;
+ if(ok){
+  annex(i,style+'による行政制圧');
+  s.trust-=style==='突撃'?11:style==='奇襲'?8:4;
+ }else{
+  s.army-=rand(5,13);
+  s.trust-=4;
+  note(names[i]+'への作戦は失敗。秘書官は「書類の不備」と説明した。');
+ }
+ finish();
+ modal(ok?'編入成功':'作戦失敗',
+  ok?names[i]+'の首長が編入通知に押印しました。なお押印理由は現在調査中です。':
+  '上山市の派遣職員は無事帰還しましたが、コピー用紙を大量に消費しました。',
+  [{label:'執務室へ戻る',fn:render}]);
+}
+
+$('attack').onclick=()=>{
+ modal('編入作戦の決裁',
+ '秘書官「行政執行方法をご指示ください。法的根拠は後日検討します」',
+ [
+  {label:'正面突破',sub:'動員22。成功率が高いが信頼が下がる。',fn:()=>assault('突撃')},
+  {label:'極秘の夜間編入',sub:'動員14。成功率が大きく変動。',fn:()=>assault('奇襲')},
+  {label:'慎重な包囲',sub:'動員8。成功率は控えめ。',fn:()=>assault('包囲')},
+  {label:'今回は見送る',fn:render}
+ ]);
+};
+
+$('talk').onclick=()=>{
+ let i=selected;
+ let chance=clamp(
+  26+s.trust*.43+
+  (s.scouted.includes(i)?10:0)-
+  power[i]*.16,10,76
+ );
+ let ok=Math.random()*100<chance;
+ if(ok){
+  annex(i,'友好的な合併協議');
+  s.trust+=5;
+ }else{
+  note(names[i]+'との合併協議は平行線。先方は「初耳です」と発言した。');
+  s.trust+=2;
+ }
+ finish();
+ modal(ok?'合併協議成立':'合併協議難航',
+  ok?'平和的な編入に成功。秘書官は「歴史的な行政効率化です」と報告しています。':
+  '先方から「なぜ上山市になる必要があるのか」と質問されました。秘書官は回答を持ち帰りました。',
+  [{label:'承知した',fn:render}]);
+};
+
+$('gift').onclick=()=>{
+ let i=selected;
+ if(s.money<18){
+  modal('予算不足','贈答用の名産品が調達できません。',
+   [{label:'戻る',fn:render}]);
+  return;
+ }
+ s.money-=18;
+ let chance=clamp(35+s.trust*.4-power[i]*.13,14,78);
+ let ok=Math.random()*100<chance;
+ if(ok){
+  annex(i,'名産品による懐柔');
+  s.trust+=7;
+ }else{
+  s.trust+=4;
+  note(names[i]+'にラ・フランスを送付。合併は拒否されたが「おいしかった」と返答があった。');
+ }
+ finish();
+ modal(ok?'贈答外交成功':'贈答外交は継続',
+  ok?names[i]+'がラ・フランスの品質を高く評価し、編入に同意しました。':
+  'ラ・フランスは受領されましたが、合併協定書は返送されました。',
+  [{label:'次の政策へ',fn:render}]);
+};
+
+$('spy').onclick=()=>{
+ let i=selected;
+ if(s.money<8){
+  modal('予算不足','調査費8が必要です。',
+   [{label:'戻る',fn:render}]);
+  return;
+ }
+ s.money-=8;
+ if(!s.scouted.includes(i))s.scouted.push(i);
+ note(names[i]+'の守備力を調査。数値は'+power[i]+'。秘書官の資料は今回だけ正確だった。');
+ finish();
+ modal('調査報告',
+  names[i]+'の守備力は'+power[i]+
+  '。現在の上山市動員力は'+s.army+'です。',
+  [{label:'確認',fn:render}]);
+};
+
+$('train').onclick=()=>{
+ s.money-=20;
+ s.army+=18;
+ note('市役所職員の動員訓練を実施。全員が上山市の地図を暗記した。');
+ finish();
+};
+
+$('tax').onclick=()=>{
+ s.money+=30;
+ s.trust-=5;
+ note('地方創生特別予算を確保。秘書官は財源について口を閉ざした。');
+ finish();
+};
+
+$('rest').onclick=()=>{
+ s.money-=15;
+ s.trust+=12;
+ s.army+=5;
+ note('かみのやま温泉にて首長級の保養会議を開催。会議は露天風呂で行われた。');
+ finish();
+};
+
+$('next').onclick=()=>{
+ s.turn++;
+ s.ap=2;
+ s.money+=12+Math.floor(s.owned.length*1.8);
+ s.army+=8+Math.floor(s.owned.length*.55);
+
+ let msg='新年度が始まりました。各出張所から予算と職員が到着しています。';
+
+ if(s.turn%4===0&&s.owned.length>3){
+  let loss=rand(9,21);
+  s.money=Math.max(0,s.money-loss);
+  msg='監査委員から「県内全域を上山市にする法的根拠」の提出を求められました。対応費'+loss+'を支出。';
+  note(msg);
+ }else if(s.turn%5===0){
+  s.trust=Math.max(0,s.trust-8);
+  msg='周辺自治体が「上山市の拡大を憂慮する会」を設立。';
+  note(msg);
+ }else if(s.turn%3===0){
+  s.money+=15;
+  msg='ラ・フランス輸出が好調。特別収入15を確保。';
+  note(msg);
+ }
+
+ if(s.turn>38&&s.owned.length<35){
+  modal('行政計画の失効',
