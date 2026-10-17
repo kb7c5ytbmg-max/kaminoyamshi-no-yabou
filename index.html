@@ -1,0 +1,1459 @@
+
+
+<!DOCTYPE html>
+
+<html lang="ja">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+
+<title>弁天二丁目の野望 Ver.12</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<style>
+
+:root{--ink:#273044;--paper:#fff9e9;--yellow:#ffd765;--blue:#86c9f4;--pink:#ffa7b4;--green:#95d7a3}
+
+*{box-sizing:border-box}
+
+body{margin:0;background:#f4dfb7;font-family:system-ui,-apple-system,sans-serif;color:var(--ink)}
+
+button{font:inherit;cursor:pointer;touch-action:manipulation}
+
+#app{max-width:720px;margin:auto;height:100dvh;display:flex;flex-direction:column;background:var(--paper);overflow:hidden}
+
+header{background:var(--yellow);border-bottom:4px solid var(--ink);padding:8px 12px;display:flex;justify-content:space-between;align-items:center}
+
+header b{font-size:17px}
+
+header small{display:block;font-size:10px}
+
+#chapter{font-size:11px;text-align:right}
+
+#stats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px}
+
+.stat{background:white;border:2px solid var(--ink);border-radius:10px;padding:4px;text-align:center;font-size:10px;box-shadow:2px 2px 0 var(--ink)}
+
+.stat b{display:block;font-size:15px}
+
+#bars{padding:0 9px;font-size:11px}
+
+.bar{height:9px;background:#ddd;border:2px solid var(--ink);border-radius:10px;overflow:hidden;margin:3px 0 5px}
+
+.bar i{display:block;height:100%;background:#69bf85;width:100%}
+
+#mentalBar{background:#ef8ca2}
+
+#clock{display:flex;gap:4px;padding:0 7px 6px}
+
+#clock button{flex:1;border:2px solid var(--ink);border-radius:8px;background:white;padding:7px 0;font-weight:bold;font-size:11px}
+
+#clock button.active{background:var(--yellow)}
+
+#mapWrap{flex:1;min-height:110px;position:relative;margin:0 7px;border:3px solid var(--ink);border-radius:12px;overflow:hidden}
+
+#map{height:100%;width:100%}
+
+#mapLabel{position:absolute;z-index:500;top:8px;left:8px;background:white;border:2px solid var(--ink);border-radius:8px;padding:5px;font-weight:bold;font-size:11px;pointer-events:none}
+
+.pin{width:29px;height:29px;background:#f38d9e;border:3px solid var(--ink);border-radius:50%;display:grid;place-items:center;font-weight:bold}
+
+.pin.mine{background:#9bddac}
+
+.pin.selected{outline:3px solid #ffb700}
+
+#scene{height:132px;display:flex;align-items:center;gap:8px;padding:5px 9px;background:#cceafa;border-top:3px solid var(--ink);border-bottom:3px solid var(--ink);overflow:hidden}
+
+#heroArt{width:115px;height:115px;flex:none;animation:bob 1.5s ease-in-out infinite}
+
+#heroArt svg{width:100%;height:100%}
+
+#speech{background:white;border:3px solid var(--ink);border-radius:15px;padding:9px;flex:1;min-width:0;position:relative;font-size:12px;line-height:1.5}
+
+#speech b{display:block;font-size:14px}
+
+#speech:before{content:"";position:absolute;left:-11px;top:30px;width:15px;height:15px;background:white;border-left:3px solid var(--ink);border-bottom:3px solid var(--ink);transform:rotate(45deg)}
+
+#target{padding:6px 10px;background:#fff1c7;font-size:11px}
+
+#target b{font-size:13px}
+
+#log{padding:6px 10px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+#actions{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:5px 7px max(10px,env(safe-area-inset-bottom))}
+
+#actions button{border:2px solid var(--ink);border-radius:11px;background:white;min-height:46px;font-size:12px;font-weight:bold;box-shadow:2px 2px 0 var(--ink)}
+
+#actions button.primary{background:var(--yellow)}
+
+#actions small{display:block;font-size:9px;font-weight:normal}
+
+#overlay{display:none;position:fixed;inset:0;background:#1c2339dd;z-index:4000;align-items:center;justify-content:center;padding:12px}
+
+#overlay.show{display:flex}
+
+#dialog{background:var(--paper);border:4px solid var(--ink);border-radius:20px;padding:15px;width:min(460px,100%);max-height:92dvh;overflow:auto;box-shadow:7px 7px 0 #141b2b}
+
+#dialog h2{margin:0 0 8px;font-size:20px}
+
+#dialogArt{height:150px;display:flex;justify-content:center;align-items:center;background:#d9edfa;border:3px solid var(--ink);border-radius:12px;overflow:hidden}
+
+#dialogArt svg{height:145px;width:145px;animation:bob 1s ease-in-out infinite}
+
+#dialogText{white-space:pre-line;font-size:12px;line-height:1.8}
+
+.choice{display:block;width:100%;background:white;border:2px solid var(--ink);border-radius:10px;margin-top:7px;padding:10px;text-align:left;font-size:12px;box-shadow:2px 2px 0 var(--ink)}
+
+.choice b{display:block;font-size:13px}
+
+.choice small{display:block;color:#666;margin-top:3px}
+
+#battleFx{display:none;position:fixed;inset:0;z-index:5000;background:#ffe4a0;align-items:center;justify-content:center;flex-direction:column;overflow:hidden}
+
+#battleFx.show{display:flex}
+
+#battleActors{display:flex;align-items:center;justify-content:center;width:100%;gap:10px}
+
+.actor{width:42%;max-width:170px}
+
+.actor svg{width:100%}
+
+.actor.left{animation:attack .45s ease-in-out 2}
+
+.actor.right{animation:hit .45s ease-in-out 2}
+
+#battleTitle{font-size:27px;font-weight:900;text-align:center;text-shadow:3px 3px white}
+
+#battleSub{font-size:13px;font-weight:bold}
+
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-7px) rotate(2deg)}}
+
+@keyframes attack{0%,100%{transform:translateX(0)}50%{transform:translateX(35px) rotate(12deg)}}
+
+@keyframes hit{0%,100%{transform:translateX(0)}50%{transform:translateX(18px) rotate(-14deg)}}
+
+@media(max-height:760px){#scene{height:95px}#heroArt{height:85px;width:85px}#stats{padding:3px 6px}.stat{padding:2px}.stat b{font-size:12px}#actions button{min-height:37px}#clock button{padding:4px 0}#dialogArt{height:110px}#dialogArt svg{height:105px}}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="app">
+
+<header>
+
+<div><small>BENTEN WARS 12</small><b>上山市弁天二丁目の野望</b></div>
+
+<div id="chapter"></div>
+
+</header>
+
+<div id="stats">
+
+<div class="stat"><b id="cash"></b>現金</div>
+
+<div class="stat"><b id="troops"></b>兵力</div>
+
+<div class="stat"><b id="food"></b>食料</div>
+
+<div class="stat"><b id="network"></b>人脈</div>
+
+<div class="stat"><b id="trust"></b>信用</div>
+
+<div class="stat"><b id="alert"></b>警戒</div>
+
+<div class="stat"><b id="ap"></b>行動力</div>
+
+<div class="stat"><b id="land"></b>領土</div>
+
+</div>
+
+<div id="bars">
+
+<div>スタミナ <b id="stamina"></b>　メンタル <b id="mental"></b>　<span id="mode"></span></div>
+
+<div class="bar"><i id="staminaBar"></i></div>
+
+<div class="bar"><i id="mentalBar"></i></div>
+
+</div>
+
+<div id="clock">
+
+<button data-speed="1">×1</button>
+
+<button data-speed="2">×2</button>
+
+<button data-speed="5">×5</button>
+
+<button data-speed="10">×10</button>
+
+<button data-speed="20">×20</button>
+
+<button id="pause">▶</button>
+
+</div>
+
+<div id="mapWrap">
+
+<div id="map"></div>
+
+<div id="mapLabel"></div>
+
+</div>
+
+<div id="scene">
+
+<div id="heroArt"></div>
+
+<div id="speech"><b id="heroName"></b><span id="quote"></span></div>
+
+</div>
+
+<div id="target"></div>
+
+<div id="log"></div>
+
+<div id="actions">
+
+<button class="primary" id="war">⚔ 出陣<small>戦闘アニメ</small></button>
+
+<button id="work">💰 仕事<small>アルバイト</small></button>
+
+<button id="people">🤝 人脈<small>怪人に会う</small></button>
+
+<button id="manage">🏯 内政<small>徴兵・休息</small></button>
+
+<button id="special">✨ 特殊<small>出家・布教</small></button>
+
+<button id="menu">📖 記録<small>保存・設定</small></button>
+
+</div>
+
+</div>
+
+<div id="overlay">
+
+<div id="dialog">
+
+<h2 id="dialogTitle"></h2>
+
+<div id="dialogArt"></div>
+
+<p id="dialogText"></p>
+
+<div id="choices"></div>
+
+</div>
+
+</div>
+
+<div id="battleFx">
+
+<div id="battleTitle"></div>
+
+<div id="battleActors">
+
+<div class="actor left" id="fxLeft"></div>
+
+<div style="font-size:35px;font-weight:bold">⚡</div>
+
+<div class="actor right" id="fxRight"></div>
+
+</div>
+
+<div id="battleSub"></div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+
+"use strict";
+
+const $=id=>document.getElementById(id);
+
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+
+const money=n=>Math.round(n).toLocaleString("ja-JP");
+
+const KEY="BENTEN_WARS_V12";
+
+const CAST={
+
+dino:["弁天ザウルス","#70c889","恐竜大暴走"],
+
+monk:["出家ザウルス","#e4ba70","ありがたい説法"],
+
+scare:["案山子将軍","#dbb36b","藁の大回転"],
+
+clock:["いまはなんじ？おじさん","#bba6ea","時空の質問"],
+
+yamaya:["やまや！！おじさん","#ed9b6b","やまや絶叫"],
+
+chief:["回覧板の鬼","#8ac7d7","回覧板乱舞"],
+
+bath:["温泉の仙人","#8dd4c5","熱湯の悟り"],
+
+mayor:["決裁保留大臣","#c1a4df","永久差し戻し"],
+
+castle:["自称上山城主","#dfb17e","お城の幻"],
+
+train:["終電を逃す男","#a0b9e1","深夜徒歩"],
+
+potato:["芋煮奉行","#dfb777","里芋砲"],
+
+chess:["将棋軍師","#c6ad7e","王手"],
+
+cherry:["さくらんぼ怪人","#f28a9b","さくらんぼ分身"],
+
+uesugi:["上杉の影武者","#8caed3","義の一撃"],
+
+mogami:["最上の亡霊","#c4a7d2","出羽結界"],
+
+fish:["庄内の魚人","#7cbab6","魚群襲来"],
+
+snow:["雪かき大臣","#aacbe1","豪雪"],
+
+melon:["スイカ将軍","#84ba8a","スイカ爆弾"],
+
+noodle:["そば仙人","#ccb28e","そば地獄"],
+
+river:["最上川の船頭","#90bad2","激流"],
+
+mountain:["山のマタギ","#a4b08b","山岳迷彩"],
+
+wine:["ワイン公爵","#c18bad","祝宴"],
+
+flower:["花粉の女王","#dda2c1","花粉嵐"],
+
+north:["北海の白熊提督","#a7cfe4","流氷"],
+
+tokyo:["満員電車皇帝","#a4a7df","満員電車"],
+
+osaka:["値切り魔王","#dfb47c","値切り"],
+
+kyoto:["千年の陰陽師","#cba4c9","結界"],
+
+okinawa:["南国の昼寝王","#83c8b7","昼寝"],
+
+samurai:["無職の剣豪","#9fb1bf","空腹一閃"],
+
+robot:["自称AI大臣","#8eb6c8","計算不能"]
+
+};
+
+function portrait(k){
+
+const c=(CAST[k]||CAST.chief)[1];
+
+const monk=k==="monk";
+
+const dino=k==="dino";
+
+const clock=k==="clock";
+
+const yamaya=k==="yamaya";
+
+const scare=k==="scare";
+
+const fish=k==="fish";
+
+const snow=k==="snow";
+
+const melon=k==="melon";
+
+let extra="";
+
+if(clock)extra='<circle cx="95" cy="23" r="18" fill="#fff" stroke="#273044" stroke-width="4"/><path d="M95 12v12l8 5" fill="none" stroke="#273044" stroke-width="3"/>';
+
+if(yamaya)extra='<path d="M97 103l30 7-9 25-31-9Z" fill="#ffdb55" stroke="#273044" stroke-width="4"/><text x="93" y="122" font-size="11" font-weight="900">やまや</text>';
+
+if(scare)extra='<path d="M10 38L72 0L133 38Z" fill="#efc46c" stroke="#273044" stroke-width="5"/><path d="M8 40h125" stroke="#273044" stroke-width="6"/>';
+
+if(fish)extra='<path d="M18 52Q70 12 122 52Q70 92 18 52Z" fill="#79c8db" stroke="#273044" stroke-width="4"/><circle cx="43" cy="49" r="5"/>';
+
+if(snow)extra='<text x="98" y="35" font-size="32">❄</text>';
+
+if(melon)extra='<circle cx="111" cy="28" r="19" fill="#6abc73" stroke="#273044" stroke-width="4"/><path d="M104 12v33M117 12v33" stroke="#273044" stroke-width="3"/>';
+
+let head=dino?`
+
+<path d="M29 75Q20 22 73 21Q111 17 116 54L138 68Q143 91 113 97H57Q28 94 29 75Z" fill="#7bd38c" stroke="#273044" stroke-width="5"/>
+
+<path d="M35 35L42 10L56 28L68 7L78 26L94 11L100 34" fill="#459b65" stroke="#273044" stroke-width="3"/>
+
+<circle cx="98" cy="58" r="7" fill="#273044"/><circle cx="100" cy="56" r="2" fill="white"/>
+
+<path d="M100 84Q120 94 133 81" fill="none" stroke="#273044" stroke-width="4"/>
+
+`:`
+
+<ellipse cx="74" cy="64" rx="43" ry="48" fill="#f3c49e" stroke="#273044" stroke-width="5"/>
+
+${monk?'<ellipse cx="69" cy="23" rx="24" ry="7" fill="#ffe7b8" opacity=".7"/>':
+
+'<path d="M31 49Q25 12 73 14Q120 13 118 49L102 35L47 39Z" fill="'+c+'" stroke="#273044" stroke-width="4"/>'}
+
+<ellipse cx="57" cy="65" rx="5" ry="${clock?8:4}" fill="#273044"/>
+
+<ellipse cx="91" cy="65" rx="5" ry="${yamaya?8:4}" fill="#273044"/>
+
+<path d="${yamaya?"M62 89Q75 68 89 89Q86 111 67 105Z":"M61 92Q74 102 88 92"}" fill="${yamaya?"#9b4354":"none"}" stroke="#273044" stroke-width="4"/>
+
+`;
+
+return `<svg viewBox="0 0 150 165" xmlns="http://www.w3.org/2000/svg">
+
+<ellipse cx="75" cy="158" rx="52" ry="6" fill="#273044" opacity=".18"/>
+
+<path d="M16 165Q17 114 53 109L95 109Q132 117 136 165Z" fill="${c}" stroke="#273044" stroke-width="5"/>
+
+<path d="M57 112L75 143L92 112" fill="${monk?"#e9a14d":"#fff1cc"}" stroke="#273044" stroke-width="3"/>
+
+${head}${extra}
+
+<path d="M20 140Q8 128 5 116" fill="none" stroke="#273044" stroke-width="6" stroke-linecap="round"/>
+
+</svg>`;
+
+}
+
+const P=(id,name,lat,lng,power,person)=>({id,name,lat,lng,power,person});
+
+const BENTEN=[
+
+P("b0","弁天二丁目",38.170,140.280,0,"dino"),
+
+P("b1","弁天一丁目",38.174,140.278,18,"clock"),
+
+P("b2","弁天東自治会",38.172,140.286,25,"yamaya"),
+
+P("b3","弁天南見回り隊",38.166,140.282,29,"chief"),
+
+P("b4","弁天西連合",38.169,140.273,35,"scare")
+
+];
+
+const CITY=[
+
+P("c0","弁天地区",38.170,140.280,0,"dino"),
+
+P("c1","上山城",38.157,140.276,52,"castle"),
+
+P("c2","かみのやま温泉駅",38.152,140.278,44,"train"),
+
+P("c3","葉山地区",38.144,140.262,48,"bath"),
+
+P("c4","蔵王坊平",38.126,140.395,64,"mountain"),
+
+P("c5","楢下宿",38.112,140.245,46,"noodle"),
+
+P("c6","茂吉記念館周辺",38.174,140.298,53,"clock"),
+
+P("c7","上山市役所",38.150,140.269,80,"mayor")
+
+];
+
+const YDATA=[
+
+["山形市",38.255,140.339,"mogami"],["米沢市",37.922,140.117,"uesugi"],
+
+["鶴岡市",38.727,139.827,"fish"],["酒田市",38.914,139.836,"fish"],
+
+["新庄市",38.765,140.301,"snow"],["寒河江市",38.381,140.276,"cherry"],
+
+["上山市",38.150,140.278,"dino"],["村山市",38.484,140.381,"flower"],
+
+["長井市",38.107,140.041,"flower"],["天童市",38.362,140.378,"chess"],
+
+["東根市",38.432,140.391,"cherry"],["尾花沢市",38.601,140.405,"melon"],
+
+["南陽市",38.055,140.148,"wine"],["山辺町",38.290,140.264,"chief"],
+
+["中山町",38.333,140.282,"potato"],["河北町",38.427,140.315,"cherry"],
+
+["西川町",38.425,140.148,"mountain"],["朝日町",38.299,140.145,"flower"],
+
+["大江町",38.380,140.205,"river"],["大石田町",38.594,140.373,"noodle"],
+
+["金山町",38.884,140.339,"mountain"],["最上町",38.758,140.520,"bath"],
+
+["舟形町",38.692,140.319,"fish"],["真室川町",38.858,140.252,"snow"],
+
+["大蔵村",38.704,140.230,"bath"],["鮭川村",38.796,140.224,"fish"],
+
+["戸沢村",38.738,140.140,"river"],["高畠町",38.003,140.189,"wine"],
+
+["川西町",38.004,140.045,"flower"],["小国町",38.061,139.744,"mountain"],
+
+["白鷹町",38.185,140.099,"flower"],["飯豊町",38.046,139.989,"mountain"],
+
+["三川町",38.796,139.850,"flower"],["庄内町",38.849,139.905,"potato"],
+
+["遊佐町",39.015,139.908,"mountain"]
+
+];
+
+const YAMAGATA=YDATA.map((x,i)=>P("y"+i,x[0],x[1],x[2],i===6?0:65+i*2,x[3]));
+
+const TOHOKU=[
+
+P("t0","山形県",38.255,140.339,0,"dino"),
+
+P("t1","宮城県",38.268,140.869,140,"robot"),
+
+P("t2","福島県",37.750,140.467,145,"samurai"),
+
+P("t3","秋田県",39.720,140.103,150,"snow"),
+
+P("t4","岩手県",39.703,141.153,155,"mountain"),
+
+P("t5","青森県",40.824,140.740,165,"north")
+
+];
+
+const JDATA=[
+
+["北海道",43.064,141.347,"north"],["青森県",40.824,140.740,"snow"],
+
+["岩手県",39.703,141.153,"mountain"],["宮城県",38.268,140.869,"robot"],
+
+["秋田県",39.720,140.103,"snow"],["山形県",38.255,140.339,"dino"],
+
+["福島県",37.750,140.467,"samurai"],["茨城県",36.342,140.447,"chess"],
+
+["栃木県",36.565,139.883,"mountain"],["群馬県",36.391,139.061,"bath"],
+
+["埼玉県",35.857,139.649,"train"],["千葉県",35.605,140.123,"fish"],
+
+["東京都",35.690,139.692,"tokyo"],["神奈川県",35.447,139.642,"robot"],
+
+["新潟県",37.902,139.023,"snow"],["富山県",36.695,137.211,"fish"],
+
+["石川県",36.594,136.626,"castle"],["福井県",36.065,136.222,"samurai"],
+
+["山梨県",35.664,138.568,"wine"],["長野県",36.651,138.181,"mountain"],
+
+["岐阜県",35.391,136.722,"castle"],["静岡県",34.976,138.383,"flower"],
+
+["愛知県",35.180,136.907,"robot"],["三重県",34.730,136.508,"fish"],
+
+["滋賀県",35.005,135.869,"river"],["京都府",35.021,135.756,"kyoto"],
+
+["大阪府",34.686,135.520,"osaka"],["兵庫県",34.691,135.183,"castle"],
+
+["奈良県",34.685,135.833,"samurai"],["和歌山県",34.226,135.167,"bath"],
+
+["鳥取県",35.503,134.238,"mountain"],["島根県",35.472,133.051,"samurai"],
+
+["岡山県",34.662,133.935,"potato"],["広島県",34.396,132.459,"castle"],
+
+["山口県",34.186,131.471,"fish"],["徳島県",34.066,134.559,"flower"],
+
+["香川県",34.340,134.043,"noodle"],["愛媛県",33.842,132.766,"fish"],
+
+["高知県",33.559,133.531,"river"],["福岡県",33.607,130.418,"train"],
+
+["佐賀県",33.250,130.298,"chess"],["長崎県",32.745,129.874,"fish"],
+
+["熊本県",32.790,130.742,"castle"],["大分県",33.238,131.612,"bath"],
+
+["宮崎県",31.911,131.424,"flower"],["鹿児島県",31.560,130.558,"melon"],
+
+["沖縄県",26.212,127.681,"okinawa"]
+
+];
+
+const JAPAN=JDATA.map((x,i)=>P("j"+i,x[0],x[1],x[2],i===5?0:180+i*4,x[3]));
+
+const CHAPTERS=[
+
+{title:"弁天の乱",area:"弁天ゾーン",center:[38.17,140.28],zoom:15,home:"b0",places:BENTEN},
+
+{title:"上山市統一",area:"上山市",center:[38.15,140.28],zoom:12,home:"c0",places:CITY},
+
+{title:"山形県統一",area:"山形県35市町村",center:[38.55,140.15],zoom:8,home:"y6",places:YAMAGATA},
+
+{title:"東北制覇",area:"東北6県",center:[39,140.6],zoom:7,home:"t0",places:TOHOKU},
+
+{title:"日本全国統一",area:"47都道府県",center:[36.4,137.5],zoom:5,home:"j5",places:JAPAN}
+
+];
+
+function fresh(){
+
+return{chapter:0,day:0,cash:32000,troops:0,food:20,network:5,
+
+trust:55,alert:0,stamina:100,mental:100,ap:3,debt:0,
+
+mode:"normal",owned:["b0"],selected:null,friends:["scare"],
+
+growth:{},history:[],religion:0,virtue:0,insults:0,won:false,
+
+gameOver:false,revivals:0,bonus:0};
+
+}
+
+let s;
+
+try{s=JSON.parse(localStorage.getItem(KEY))||fresh()}catch(e){s=fresh()}
+
+if(!CHAPTERS[s.chapter]||!Array.isArray(s.owned))s=fresh();
+
+let map=null,markers=[],speed=1,running=false,timer=null,modal=false;
+
+const ch=()=>CHAPTERS[s.chapter];
+
+const target=()=>ch().places.find(p=>p.id===s.selected);
+
+const mine=p=>s.owned.includes(p.id);
+
+const enemy=p=>p.power+(s.growth[p.id]||0);
+
+const income=()=>1000+s.owned.length*700;
+
+const expense=()=>1200+Math.ceil(s.troops/10)*120+s.friends.length*150;
+
+const net=()=>income()-expense();
+
+function save(){try{localStorage.setItem(KEY,JSON.stringify(s))}catch(e){}}
+
+function note(t){s.history.unshift("第"+(s.day+1)+"日 "+t);s.history=s.history.slice(0,100);$("log").textContent=t;save()}
+
+function render(){
+
+$("cash").textContent=money(s.cash);
+
+$("troops").textContent=money(s.troops);
+
+$("food").textContent=s.food;
+
+$("network").textContent=s.network;
+
+$("trust").textContent=s.trust;
+
+$("alert").textContent=s.alert;
+
+$("ap").textContent=s.ap+"/3";
+
+$("land").textContent=s.owned.length+"/"+ch().places.length;
+
+$("stamina").textContent=s.stamina;
+
+$("mental").textContent=s.mental;
+
+$("staminaBar").style.width=clamp(s.stamina,0,100)+"%";
+
+$("mentalBar").style.width=clamp(s.mental,0,100)+"%";
+
+$("chapter").innerHTML=ch().title+"<br><small>第"+(s.day+1)+"日</small>";
+
+$("mapLabel").textContent=ch().area;
+
+$("mode").textContent=s.mode==="normal"?"通常":s.mode==="isolated"?"⚠ 開き直り":"☸ 弁天教";
+
+$("heroArt").innerHTML=portrait(s.mode==="monk"?"monk":"dino");
+
+$("heroName").textContent=s.mode==="monk"?"出家ザウルス":"弁天ザウルス";
+
+$("quote").textContent=s.mode==="monk"?"「頭は丸めた。野望は丸めていない。」":
+
+s.mode==="isolated"?"「もう失うものはない……。」":
+
+"「弁天二丁目から天下統一だ！」";
+
+const p=target();
+
+$("target").innerHTML=p?
+
+"<b>"+p.name+"</b>｜"+(mine(p)?"統治中":"敵戦力 "+enemy(p))+"｜"+CAST[p.person][0]:
+
+"地図上の攻略地点をタップして選択";
+
+document.querySelectorAll("[data-speed]").forEach(b=>b.classList.toggle("active",+b.dataset.speed===speed&&running));
+
+$("pause").textContent=running?"■":"▶";
+
+markers.forEach(x=>x.m.setIcon(iconFor(x.p)));
+
+save();
+
+}
+
+function stop(){running=false;if(timer)clearInterval(timer);timer=null;render()}
+
+function start(n=speed){
+
+if(modal||s.gameOver)return;
+
+speed=n;running=true;
+
+if(timer)clearInterval(timer);
+
+timer=setInterval(()=>{
+
+for(let i=0;i<speed;i++){
+
+if(modal||s.gameOver||!advance()){stop();return}
+
+}
+
+render();
+
+},1400);
+
+render();
+
+}
+
+function show(title,text,options=[],person="dino"){
+
+stop();modal=true;
+
+$("dialogTitle").textContent=title;
+
+$("dialogText").textContent=text;
+
+$("dialogArt").innerHTML=portrait(person);
+
+$("choices").replaceChildren();
+
+options.forEach(o=>{
+
+const b=document.createElement("button");b.className="choice";
+
+const a=document.createElement("b");a.textContent=o.label;
+
+const sm=document.createElement("small");sm.textContent=o.note||"";
+
+b.append(a,sm);
+
+b.onclick=()=>{
+
+modal=false;$("overlay").classList.remove("show");
+
+if(o.fn)o.fn();
+
+if(!modal)crisis();
+
+render();
+
+};
+
+$("choices").appendChild(b);
+
+});
+
+$("overlay").classList.add("show");
+
+}
+
+const info=(a,b,p="dino")=>show(a,b,[{label:"わかった"}],p);
+
+function iconFor(p){
+
+return L.divIcon({className:"",html:`<div class="pin ${mine(p)?"mine":""} ${s.selected===p.id?"selected":""}">${mine(p)?"✓":"!"}</div>`,iconSize:[29,29],iconAnchor:[14,14]});
+
+}
+
+function draw(){
+
+if(!map)return;
+
+markers.forEach(x=>map.removeLayer(x.m));markers=[];
+
+map.flyTo(ch().center,ch().zoom,{duration:1});
+
+ch().places.forEach(p=>{
+
+const m=L.marker([p.lat,p.lng],{icon:iconFor(p)}).addTo(map);
+
+m.bindTooltip(p.name);
+
+m.on("click",()=>{s.selected=p.id;render()});
+
+markers.push({p,m});
+
+});
+
+}
+
+function spend(a,st){
+
+if(s.mode!=="normal"){info("行動できない","専用モードの行動を選んでください。");return false}
+
+if(s.ap<a){info("行動力不足","翌日になると回復します。");return false}
+
+if(s.stamina<st){info("スタミナ不足","休息が必要です。");return false}
+
+s.ap-=a;s.stamina-=st;return true;
+
+}
+
+function crisis(){
+
+if(s.mode!=="normal"||s.gameOver)return;
+
+if(s.cash<=-100000||s.network<=0){
+
+isolate(s.cash<=-100000?"財政破綻":"人脈崩壊");
+
+}
+
+}
+
+function isolate(reason){
+
+s.mode="isolated";s.mental=75;s.troops=0;s.network=0;s.friends=[];
+
+show("開き直りか、出家か",reason+"。\n\nすべてを失った弁天ザウルス。\n\nこのまま開き直るか、頭を丸めて弁天教を興すか。",
+
+[
+
+{label:"🔥 開き直る",note:"孤独な日々。メンタルが減少する"},
+
+{label:"☸ 出家する",note:"弁天教を広め、領土を獲得する",fn:monkStart}
+
+],"dino");
+
+}
+
+function monkStart(){
+
+s.mode="monk";s.virtue=0;s.religion=0;s.mental=90;
+
+show("弁天教、開宗！",
+
+"弁天ザウルスは頭を丸めた。\n\n住民『ハゲ坊主だ！』\n\n出家ザウルス『違う。これは悟りのフォルムだ。』\n\n弁天教の布教が始まる。",
+
+[{label:"合掌する"}],"monk");
+
+}
+
+const INSULTS=[
+
+["clock","『いまはなんじ？ あ、お前には予定がないか。』"],
+
+["yamaya","『やまや！！ その計画、ひどすぎる！！』"],
+
+["chief","『回覧板からお前の名前を消した。』"],
+
+["scare","『案山子の私より頼りないな。』"],
+
+["train","『俺は終電を逃したが、お前は人生を逃した。』"]
+
+];
+
+function isolatedEvent(){
+
+const e=INSULTS[rand(0,INSULTS.length-1)];
+
+const dmg=rand(10,19);
+
+s.mental=clamp(s.mental-dmg,0,100);s.insults++;
+
+if(s.mental===0){gambleOffer();return}
+
+show("孤独な一日",CAST[e[0]][0]+" "+e[1]+"\n\nメンタル −"+dmg+"\n残り："+s.mental,
+
+[{label:"耐える"},{label:"☸ 出家する",fn:monkStart}],e[0]);
+
+}
+
+function gambleOffer(){
+
+show("最終手段、倍プッシュ",
+
+"メンタルが0になった。\n\n最後の一発逆転。\n成功率は20%。\n成功すれば戦力1,500・現金300万円を獲得。\n失敗すれば本当のゲームオーバー。",
+
+[{label:"🎰 倍プッシュ！",fn:gamble},{label:"☸ 出家する",fn:monkStart}],"dino");
+
+}
+
+function gamble(){
+
+if(Math.random()<.20){
+
+s.mode="normal";s.mental=100;s.cash=3000000;s.troops=1500;
+
+s.food=500;s.network=100;s.trust=100;s.stamina=100;s.ap=3;s.debt=0;
+
+s.friends=["scare","yamaya","clock"];s.revivals++;
+
+show("倍プッシュ大成功！",
+
+"奇跡の20%を引いた！\n\n現金300万円！\n戦力1,500！\n山形県統一を狙える超戦力！",
+
+[{label:"天下統一へ"}],"dino");
+
+}else{
+
+s.gameOver=true;
+
+show("GAME OVER","倍プッシュ失敗。\n弁天ザウルスの野望はここで終わった。",
+
+[{label:"最初から",fn:()=>{s=fresh();draw();note("新たな野望が始まった。")}}],"dino");
+
+}
+
+}
+
+function monkMenu(){
+
+if(s.mode!=="monk"){info("まだ出家していない","開き直り状態から出家できます。");return}
+
+show("☸ 弁天教・宗務所",
+
+"信者："+s.religion+"人\n徳："+s.virtue+"\nメンタル："+s.mental+
+
+"\n\n弁天教が全国へ広まれば、戦わずして天下統一も夢ではない。",
+
+[
+
+{label:"座禅",note:"行動1／徳＋5／メンタル＋10",fn:()=>{
+
+if(s.ap<1){info("行動力不足","明日まで待とう。");return}
+
+s.ap--;s.virtue+=5;s.mental=clamp(s.mental+10,0,100);note("座禅で徳を積んだ。");
+
+}},
+
+{label:"街頭説法",note:"行動1／信者＋10〜30",fn:()=>{
+
+if(s.ap<1){info("行動力不足","明日まで待とう。");return}
+
+s.ap--;let n=rand(10,30);s.religion+=n;note("信者が"+n+"人増えた。");
+
+}},
+
+{label:"托鉢",note:"行動1／現金＋8,000",fn:()=>{
+
+if(s.ap<1){info("行動力不足","明日まで待とう。");return}
+
+s.ap--;s.cash+=8000;note("托鉢で8,000円を得た。");
+
+}},
+
+{label:"📣 大布教チャンス",note:"信者100・徳20以上／成功率30%",fn:mission},
+
+{label:"閉じる"}
+
+],"monk");
+
+}
+
+function mission(){
+
+if(s.religion<100||s.virtue<20){
+
+info("信仰不足","大布教には信者100人・徳20以上が必要。");
+
+return;
+
+}
+
+s.religion-=100;s.virtue-=20;
+
+if(Math.random()<.30){
+
+if(s.chapter<2){
+
+s.chapter=2;s.owned=[ch().home];
+
+s.selected=null;
+
+draw();
+
+}
+
+s.owned=ch().places.map(p=>p.id);
+
+s.cash+=500000;s.mental=100;
+
+show("速報！ 山形県が弁天教に！",
+
+"ニュース『山形県内で弁天教が爆発的に流行！』\n\n住民『ハゲ坊主さまー！』\n\n出家ザウルス『ハゲではない。教祖だ。』\n\n山形県35市町村が一斉に帰依！",
+
+[{label:"次の時代へ",fn:()=>{
+
+s.mode="normal";s.troops=300;s.network=80;s.food=200;
+
+s.chapter=3;s.owned=[ch().home];s.selected=null;draw();
+
+note("東北制覇編が開幕！");
+
+}}],"monk");
+
+}else{
+
+show("大布教、失敗！",
+
+"住民『弁天教って何？』\n\n教祖『まだ早かったか……。』\n\n信者100人と徳20を消費した。",
+
+[{label:"布教を続ける"}],"monk");
+
+}
+
+}
+
+function advance(){
+
+s.day++;s.ap=3;s.stamina=clamp(s.stamina+12,0,100);
+
+if(s.mode==="isolated"){
+
+s.cash-=1500;
+
+if(s.day%2===0){isolatedEvent();return false}
+
+note("誰からも連絡がない。");return true;
+
+}
+
+if(s.mode==="monk"){
+
+s.cash-=300;s.mental=clamp(s.mental+2,0,100);
+
+if(s.day%5===0){
+
+show("出家の日々",
+
+"通行人『ハゲ坊主！』\n\n教祖『光っているのは頭ではない。徳だ。』\n\n徳＋3",
+
+[{label:"合掌する",fn:()=>{s.virtue+=3}}],"monk");
+
+return false;
+
+}
+
+return true;
+
+}
+
+s.cash+=net();
+
+if(s.day%5===0)s.food-=1+Math.ceil(s.troops/20);
+
+if(s.food<0){s.food=0;s.troops=Math.max(0,s.troops-3)}
+
+if(s.day%4===0){
+
+const es=ch().places.filter(p=>!mine(p));
+
+if(es.length){const p=es[rand(0,es.length-1)];s.growth[p.id]=(s.growth[p.id]||0)+2}
+
+}
+
+if(s.troops===0&&s.day%3===0){
+
+show("やまや！！襲来",
+
+"やまや！！おじさん『兵士がゼロだと！？』\n\n軍勢が本拠地に迫る！",
+
+[
+
+{label:"傭兵を雇う",note:"現金−25,000／兵力＋15",fn:()=>{s.cash-=25000;s.troops+=15}},
+
+{label:"降伏する",fn:()=>isolate("本拠地陥落")}
+
+],"yamaya");
+
+return false;
+
+}
+
+crisis();
+
+return !modal;
+
+}
+
+function battleAnimation(p,style,callback){
+
+$("battleTitle").textContent=style==="tank"?"戦車突撃！！":
+
+style==="hypnosis"?"催眠術発動！":
+
+style==="ambush"?"夜襲！！":"出陣！！";
+
+$("fxLeft").innerHTML=portrait("dino");
+
+$("fxRight").innerHTML=portrait(p.person);
+
+$("battleSub").textContent="弁天ザウルス VS "+CAST[p.person][0];
+
+$("battleFx").classList.add("show");
+
+setTimeout(()=>{
+
+$("battleFx").classList.remove("show");
+
+callback();
+
+},1000);
+
+}
+
+function war(){
+
+if(s.mode!=="normal"){info("戦争できない","開き直り・出家中は専用行動を使おう。");return}
+
+const p=target();
+
+if(!p){info("攻略先を選択","地図をタップして敵を選んでください。");return}
+
+if(mine(p)){info("統治済み","すでに領土です。");return}
+
+show("⚔ "+p.name+" 攻略戦",
+
+"敵将："+CAST[p.person][0]+"\n敵戦力："+enemy(p)+"\n自軍："+s.troops,
+
+[
+
+{label:"正面突破",note:"スタミナ−30",fn:()=>fight(p,"charge")},
+
+{label:"🚜 戦車突撃",note:"30,000円／スタミナ−35",fn:()=>fight(p,"tank")},
+
+{label:"🌀 催眠術",note:"12,000円／スタミナ−25",fn:()=>fight(p,"hypnosis")},
+
+{label:"🌙 夜襲",note:"8,000円／スタミナ−20",fn:()=>fight(p,"ambush")},
+
+{label:"撤退"}
+
+],p.person);
+
+}
+
+function fight(p,style){
+
+const cost={charge:0,tank:30000,hypnosis:12000,ambush:8000}[style];
+
+const st={charge:30,tank:35,hypnosis:25,ambush:20}[style];
+
+if(s.troops<=0){info("兵力ゼロ","先に徴兵してください。");return}
+
+if(s.cash<cost){info("資金不足","作戦費用が足りません。");return}
+
+if(!spend(1,st))return;
+
+s.cash-=cost;
+
+battleAnimation(p,style,()=>{
+
+let chance=45+(s.troops-enemy(p))*1.1+s.friends.length*3;
+
+if(style==="tank")chance+=40;
+
+if(style==="hypnosis")chance+=22;
+
+if(style==="ambush")chance+=15;
+
+chance=clamp(chance,5,97);
+
+const win=Math.random()*100<chance;
+
+const loss=rand(3,win?9:18);
+
+s.troops=Math.max(0,s.troops-loss);
+
+s.alert=clamp(s.alert+(style==="tank"?20:5),0,100);
+
+if(win){
+
+s.owned.push(p.id);s.network=clamp(s.network+2,0,100);
+
+s.cash+=rand(4000,12000);
+
+note(p.name+"を制圧！");
+
+if(s.owned.length===ch().places.length)complete();
+
+else show("大勝利！",CAST[p.person][0]+"を撃破！\n\n戦力−"+loss,
+
+[{label:"勝利のポーズ！"}],p.person);
+
+}else{
+
+note(p.name+"で敗北。");
+
+show("敗北！","敵将「まだまだ甘いな！」\n\n戦力−"+loss,
+
+[{label:"再挑戦する"}],p.person);
+
+}
+
+});
+
+}
+
+function complete(){
+
+if(s.chapter===4){
+
+s.won=true;
+
+show("全国統一！","弁天二丁目から始まった野望が日本全国を制覇！",
+
+[{label:"続ける"}],"dino");
+
+return;
+
+}
+
+const next=s.chapter+1;
+
+show("エリア制覇！",
+
+ch().area+"を完全制圧！\n\n次は「"+CHAPTERS[next].area+"」へ進軍！",
+
+[{label:"次の章へ",fn:()=>{
+
+s.chapter=next;s.owned=[ch().home];s.selected=null;
+
+s.troops+=40;s.cash+=100000;s.food+=50;s.ap=3;s.stamina=100;
+
+draw();note(ch().area+"編が始まった！");
+
+}}],"dino");
+
+}
+
+function work(){
+
+if(s.mode==="monk"){monkMenu();return}
+
+if(s.mode!=="normal"){info("仕事がない","誰も雇ってくれない。");return}
+
+show("💰 アルバイト",
+
+"現金："+money(s.cash)+"円\n行動力："+s.ap+"/3",
+
+[
+
+{label:"短時間バイト",note:"行動1／体力−15／＋6,000円",fn:()=>{
+
+if(!spend(1,15))return;s.cash+=6000;note("バイト代6,000円。");
+
+}},
+
+{label:"長時間バイト",note:"行動2／体力−40／＋18,000円",fn:()=>{
+
+if(!spend(2,40))return;s.cash+=18000;note("バイト代18,000円。");
+
+}},
+
+{label:"食料を買う",note:"行動1／−8,000円／食料＋20",fn:()=>{
+
+if(!spend(1,5))return;s.cash-=8000;s.food+=20;
+
+}},
+
+{label:"借金する",note:"＋50,000円／借金＋55,000円",fn:()=>{
+
+if(!spend(1,5))return;s.cash+=50000;s.debt+=55000;s.network--;
+
+}},
+
+{label:"閉じる"}
+
+],"chief");
+
+}
+
+function people(){
+
+if(s.mode==="monk"){monkMenu();return}
+
+if(s.mode!=="normal"){info("孤立","誰も電話に出ない。");return}
+
+show("🤝 人脈づくり",
+
+"奇妙な仲間を増やそう。",
+
+[
+
+{label:"街で怪人を探す",note:"行動1／スタミナ−20",fn:()=>{
+
+if(!spend(1,20))return;
+
+const keys=Object.keys(CAST).filter(k=>!["dino","monk"].includes(k)&&!s.friends.includes(k));
+
+const k=keys[rand(0,keys.length-1)]||"clock";
+
+show("怪人が仲間になった！",CAST[k][0]+"が現れた！\n必殺技："+CAST[k][2],
+
+[{label:"仲間にする",fn:()=>{if(!s.friends.includes(k))s.friends.push(k);s.network+=2}}],k);
+
+}},
+
+{label:"地域交流会",note:"行動1／人脈＋5／信用＋5",fn:()=>{
+
+if(!spend(1,15))return;s.network+=5;s.trust=clamp(s.trust+5,0,100);
+
+}},
+
+{label:"閉じる"}
+
+],"clock");
+
+}
+
+function manage(){
+
+if(s.mode==="monk"){monkMenu();return}
+
+if(s.mode!=="normal"){info("内政停止","誰も命令を聞かない。");return}
+
+show("🏯 内政",
+
+"日次収支："+money(net())+"円",
+
+[
+
+{label:"徴兵",note:"行動1／15,000円／兵力＋20",fn:()=>{
+
+if(!spend(1,20))return;s.cash-=15000;s.troops+=20;
+
+}},
+
+{label:"休息",note:"行動1／スタミナ＋45",fn:()=>{
+
+if(s.ap<1){info("行動力不足","翌日まで待とう。");return}
+
+s.ap--;s.stamina=clamp(s.stamina+45,0,100);
+
+}},
+
+{label:"住民サービス",note:"行動1／12,000円／信用＋15",fn:()=>{
+
+if(!spend(1,15))return;s.cash-=12000;s.trust=clamp(s.trust+15,0,100);
+
+}},
+
+{label:"強引な徴税",note:"行動1／現金＋30,000／信用−20",fn:()=>{
+
+if(!spend(1,10))return;s.cash+=30000;s.trust=clamp(s.trust-20,0,100);
+
+}},
+
+{label:"閉じる"}
+
+],"mayor");
+
+}
+
+function special(){
+
+if(s.mode==="monk"){monkMenu();return}
+
+if(s.mode==="isolated"){
+
+show("開き直り",
+
+"メンタル："+s.mental+"\n\n出家するか、孤独な日々を続けるか。",
+
+[{label:"☸ 出家する",fn:monkStart},{label:"耐える"}],"dino");
+
+return;
+
+}
+
+info("特殊行動","通常モードです。\n破産や人脈崩壊から別ルートが始まります。");
+
+}
+
+function menu(){
+
+show("📖 戦記",
+
+"第"+(s.day+1)+"日\n日次収支："+money(net())+"円\n借金："+money(s.debt)+"円\n\n"+
+
+s.history.slice(0,8).join("\n"),
+
+[
+
+{label:"最初からやり直す",fn:()=>{
+
+show("初期化確認","セーブデータを消去します。",
+
+[{label:"消去する",fn:()=>{s=fresh();draw();note("新たな野望が始まった。")}},{label:"戻る"}]);
+
+}},
+
+{label:"閉じる"}
+
+],"dino");
+
+}
+
+$("war").onclick=war;
+
+$("work").onclick=work;
+
+$("people").onclick=people;
+
+$("manage").onclick=manage;
+
+$("special").onclick=special;
+
+$("menu").onclick=menu;
+
+document.querySelectorAll("[data-speed]").forEach(b=>{
+
+b.onclick=()=>{
+
+const n=+b.dataset.speed;
+
+if(running&&speed===n)stop();
+
+else start(n);
+
+};
+
+});
+
+$("pause").onclick=()=>running?stop():start(speed);
+
+document.addEventListener("visibilitychange",()=>{if(document.hidden)stop()});
+
+window.addEventListener("load",()=>{
+
+if(typeof L!=="undefined"){
+
+map=L.map("map").setView(ch().center,ch().zoom);
+
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+
+maxZoom:19,attribution:'&copy; OpenStreetMap contributors'
+
+}).addTo(map);
+
+draw();
+
+}else{
+
+$("mapLabel").textContent="地図の読み込みに失敗";
+
+}
+
+render();
+
+if(!s.history.length)note("弁天二丁目の野望が始まった！");
+
+});
+
+</script>
+
+</body>
+
+</html>
